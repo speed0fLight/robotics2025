@@ -4,7 +4,20 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.motorcontrol.*;
+
+import com.revrobotics.jni.CANSparkJNI;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+
+import edu.wpi.first.util.sendable.SendableRegistry;
+import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.TimedRobot;
+
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -14,19 +27,50 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * this project, you must also update the Main.java file in the project.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  // "CANSparkMax" was changed to SparkMax. Hi Steve!
+  private final SparkMax m_rightMotor = new SparkMax(2, MotorType.kBrushed);
+  private final SparkMax m_rightMotor_follower = new SparkMax(3, MotorType.kBrushed);
+  private final SparkMax m_leftMotor = new SparkMax(4, MotorType.kBrushed);
+  private final SparkMax m_leftMotor_follower = new SparkMax(5, MotorType.kBrushed);
+  
+  SparkMaxConfig cimConfig = new SparkMaxConfig();
+  
 
-  /**
-   * This function is run when the robot is first started up and should be used for any
-   * initialization code.
-   */
+// Configure primary encoder for brushed motor
+//cimConfig.encoder.countsPerRevolution(8192).inverted(true);
+  
+//cim.configure(cimConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+  //private final CANSparkJNI m_leftMotor = new CANSparkMax(2, MotorType.kBrushed);
+private final DifferentialDrive m_robotDrive = new DifferentialDrive(m_leftMotor::set, m_rightMotor::set);
+private final Joystick m_stick = new Joystick(0);
+
   public Robot() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+    SendableRegistry.addChild(m_robotDrive, m_leftMotor);
+    SendableRegistry.addChild(m_robotDrive, m_rightMotor);
+   }
+
+   @Override
+  public void robotInit() {
+    // We need to invert one side of the drivetrain so that positive voltages
+    // result in both sides moving forward. Depending on how your robot's
+    // gearbox is constructed, you might have to invert the left side instead.
+    m_rightMotor.setInverted(true);
+    m_rightMotor_follower.setInverted(true);
+    m_leftMotor.setInverted(true);
+    m_leftMotor.setInverted(true);
+    m_rightMotor.setIdleMode(IdleMode.kBrake); // this stuff is currently broken, working on porting it to the latest package.
+    m_leftMotor.setIdleMode(IdleMode.kBrake);
+    m_leftMotor_follower.follow(m_leftMotor);
+    m_rightMotor_follower.follow(m_rightMotor);
+
+    // some docs below for sparkmax --vv
+    //https://docs.revrobotics.com/revlib/spark/configuring-a-spark
+
+    // Lift_02.setIdleMode(IdleMode.kCoast);
+    // Lift_03.setIdleMode(IdleMode.kCoast);
+    // Lift_04.setIdleMode(IdleMode.kCoast);
+
   }
 
   /**
@@ -51,32 +95,25 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
-  }
+    }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }
+    
   }
 
   /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+
+  }
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+    m_robotDrive.arcadeDrive(-m_stick.getY(), -m_stick.getX());
+  }
 
   /** This function is called once when the robot is disabled. */
   @Override
